@@ -1,5 +1,6 @@
 # Put your persistent store models in this file
 import os
+import re
 import shutil
 import threading
 import inspect
@@ -16,6 +17,7 @@ from django.contrib.auth.models import User
 from tethys_apps.base.function_extractor import TethysFunctionExtractor
 from uit.exceptions import DpRouteError
 from uit import Client, PbsScript, PbsJob, PbsArrayJob
+from uit.pbs_script import PbsDirective
 from uit.pbs_script import NODE_TYPES
 from tethys_compute.models.tethys_job import TethysJob
 
@@ -324,6 +326,20 @@ class UitPlusJob(PbsScript, TethysJob):
                     sub_job._status = sub_job.qstat.get('status')
             self._pbs_job = j
         return self._pbs_job
+
+    @property
+    def optional_directives(self):
+        """Get a list of all defined directives.
+
+        Returns:
+             list: All defined directives.
+        """
+        return [self.parse_pbs_directive(d) for d in self._optional_directives]
+
+    @staticmethod
+    def parse_pbs_directive(directive_str):
+        m = re.match("PbsDirective\(directive='(.*?)', options='(.*?)'\)", directive_str)
+        return PbsDirective(*m.groups())
 
     @property
     def archive_dir(self):
